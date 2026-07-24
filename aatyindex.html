@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Contagem de Estoque</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e85d26">
+<link rel="icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f5f7fa;
+    --border: #e3e8ef;
+    --accent: #0b9e6e;
+    --accent2: #e85d26;
+    --accent3: #5b50d6;
+    --text: #111827;
+    --text2: #6b7280;
+    --danger: #dc2626;
+    --success: #0b9e6e;
+    --warn: #d97706;
+    --radius: 18px;
+    --radius-sm: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 0 var(--border), 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .header-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent3));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--text); }
+  .header-sub { font-size: 11px; color: var(--text2); }
+  .header-store {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .header-store select {
+    font-size: 11px;
+    padding: 7px 26px 7px 10px;
+    border-radius: 8px;
+    min-width: 0;
+    width: auto;
+  }
+
+  .screen-body { padding: 20px; flex: 1; overflow-y: auto; padding-bottom: 100px; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── INPUT ── */
+  .input-group { margin-bottom: 12px; }
+  .input-group label { font-size: 12px; font-weight: 500; color: var(--text2); display: block; margin-bottom: 6px; }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(232,93,38,0.15);
+  }
+  input::placeholder { color: #b4bac6; }
+
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  select option { background: var(--surface); color: var(--text); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: linear-gradient(135deg, #f0733a, #e85d26);
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(232,93,38,0.3);
+  }
+  .btn-outline {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+  }
+  .btn-text {
+    background: transparent;
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    text-decoration: underline;
+    padding: 8px;
+    width: auto;
+  }
+
+  /* ── SEARCH ── */
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .search-bar input { flex: 1; }
+  .search-cam-btn {
+    width: 44px; height: 44px; flex-shrink: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 20px;
+  }
+
+  .product-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+  .product-item {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.15s;
+  }
+  .product-item.selected { border-color: var(--accent2); background: rgba(232,93,38,0.05); }
+  .product-item-top { display: flex; align-items: center; gap: 12px; }
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 13px; font-weight: 500; }
+  .product-code { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .product-stock {
+    font-size: 11px; font-weight: 600; color: var(--accent3);
+    background: rgba(91,80,214,0.1);
+    border-radius: 20px; padding: 3px 9px; flex-shrink: 0; white-space: nowrap;
+  }
+
+  .qty-row { display: flex; align-items: center; gap: 10px; }
+  .qty-row label { font-size: 11px; color: var(--text2); flex-shrink: 0; }
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex: 1;
+  }
+  .qty-btn {
+    width: 38px; height: 38px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .qty-btn:active { background: rgba(0,0,0,0.07); }
+  .qty-val {
+    width: 100%;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    color: var(--text);
+    padding: 0;
+  }
+  .qty-val::-webkit-inner-spin-button, .qty-val::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .qty-val[type=number] { -moz-appearance: textfield; }
+  .diff-tag {
+    font-size: 11px; font-weight: 700; border-radius: 20px; padding: 4px 10px; flex-shrink: 0; white-space: nowrap;
+  }
+  .diff-ok { color: var(--success); background: rgba(11,158,110,0.1); }
+  .diff-falta { color: var(--danger); background: rgba(220,38,38,0.1); }
+  .diff-sobra { color: var(--warn); background: rgba(217,119,6,0.1); }
+
+  /* ── CONTAGEM LIST (CART) ── */
+  .cart-section {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .cart-header { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+  .cart-count { background: var(--accent2); color: #fff; border-radius: 20px; padding: 2px 8px; font-size: 11px; }
+  .cart-subtitle { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+  .cart-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .cart-item:last-child { border-bottom: none; }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  .cart-item-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .cart-remove { color: var(--danger); cursor: pointer; margin-left: 4px; font-size: 16px; flex-shrink: 0; }
+
+  /* ── STICKY FOOTER ── */
+  .footer-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+    z-index: 90;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(17,24,39,0.45);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 32px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-top: 1px solid var(--border);
+    animation: slideUp 0.3s ease;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 16px; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+
+  /* ── SCANNER OVERLAY ── */
+  .scanner-overlay {
+    position: fixed; inset: 0;
+    background: #000;
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .scanner-overlay.active { display: flex; }
+  .scanner-video { width: 100%; max-width: 400px; border-radius: 12px; }
+  .scanner-frame {
+    position: absolute;
+    width: 240px; height: 140px;
+    border: 2px solid var(--accent2);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .scanner-frame::before, .scanner-frame::after {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-color: var(--accent2);
+    border-style: solid;
+  }
+  .scanner-frame::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .scanner-frame::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+  .scanner-line {
+    position: absolute;
+    width: 220px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+    animation: scanLine 1.5s ease-in-out infinite;
+  }
+  @keyframes scanLine {
+    0% { top: 10px; }
+    50% { top: 120px; }
+    100% { top: 10px; }
+  }
+  .scanner-text { color: #fff; font-size: 14px; margin-top: 20px; opacity: 0.7; }
+  .scanner-close {
+    position: absolute;
+    top: 50px; right: 20px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 40px; height: 40px;
+    border-radius: 20px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .scanner-manual-btn {
+    margin-top: 24px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .scanner-message {
+    position: absolute;
+    top: 90px; left: 20px; right: 20px;
+    background: rgba(220,38,38,0.95);
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    text-align: center;
+    font-weight: 500;
+    display: none;
+    z-index: 310;
+  }
+  .scanner-message.show { display: block; }
+  .scanner-result-card {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+    display: none;
+    z-index: 310;
+    animation: slideUp 0.25s ease;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.3);
+  }
+  .scanner-result-card.show { display: block; }
+  .src-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; color: var(--text); }
+  .src-meta { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1f2e;
+    border: none;
+    border-radius: 30px;
+    padding: 12px 22px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 500;
+    white-space: nowrap;
+    transition: transform 0.3s ease;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast { color: #fff; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+  .toast.success { background: #0b9e6e; }
+  .toast.error { background: #dc2626; }
+
+  /* ── FILE UPLOAD ── */
+  .file-upload-area {
+    background: var(--surface);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+  }
+  .file-upload-area.has-file { border-color: var(--accent2); background: rgba(232,93,38,0.05); }
+  .file-upload-area .icon { font-size: 28px; margin-bottom: 8px; }
+  .file-upload-area p { font-size: 13px; color: var(--text2); }
+  .file-upload-area .file-name { font-size: 12px; color: var(--accent2); margin-top: 4px; font-weight: 500; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* ── STAT ROW ── */
+  .stat-row { display: flex; gap: 10px; margin-bottom: 4px; }
+  .stat-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; }
+  .stat-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+  .spacer { height: 30px; }
+</style>
+</head>
+<body>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./service-worker.js');
+}
+</script>
+
+<div style="display:flex; flex-direction:column; min-height:100vh;">
+
+  <div class="header">
+    <div class="header-icon">🔢</div>
+    <div>
+      <div class="header-title">Contagem de Estoque</div>
+      <div class="header-sub" id="header-sub">Confira o estoque físico da loja</div>
+    </div>
+    <div class="header-store">
+      <select id="loja-select" onchange="onLojaChange()">
+        <option value="Pedra">Pedra</option>
+        <option value="Agulhas">Agulhas</option>
+        <option value="Vargem">Vargem</option>
+        <option value="Ilha de Guaratiba">Ilha de Guaratiba</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="screen-body">
+
+    <!-- Banco de produtos -->
+    <div class="section-label">Banco de Produtos</div>
+    <div class="file-upload-area" id="upload-area">
+      <div class="icon" id="db-icon">⏳</div>
+      <p id="db-status">Carregando produtos.csv...</p>
+      <div class="file-name" id="file-name-label" style="display:none;"></div>
+    </div>
+    <div id="fallback-upload" style="display:none; margin-top:8px;">
+      <div style="font-size:12px; color:var(--text2); text-align:center; margin-bottom:8px;">
+        Ou carregue manualmente (.csv ou .xlsx):
+      </div>
+      <label style="display:block; cursor:pointer;">
+        <div class="file-upload-area" style="margin-bottom:0; padding:14px;">
+          <div class="icon" style="font-size:20px;">📂</div>
+          <p style="font-size:12px;">Toque para selecionar o arquivo</p>
+          <div class="file-name" id="file-name-label2" style="display:none;"></div>
+        </div>
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none;" onchange="loadFileManual(this)">
+      </label>
+    </div>
+
+    <!-- Grupo de produtos -->
+    <div class="section-label">Grupo de Produtos</div>
+    <div class="input-group">
+      <label>Selecione o grupo linha para contar</label>
+      <select id="grupo-select" onchange="onGrupoChange()" disabled>
+        <option value="">Carregue a planilha primeiro...</option>
+      </select>
+    </div>
+
+    <!-- Resumo da contagem -->
+    <div class="stat-row" id="stat-row" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Itens contados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-diff" style="color:var(--warn);">0</div>
+        <div class="stat-label">Com divergência</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="section-label">Buscar Produto</div>
+    <div class="search-bar">
+      <input type="text" id="product-search" placeholder="Nome ou código de barras..." oninput="filterProducts()">
+      <div class="search-cam-btn" onclick="openScanner()">📷</div>
+    </div>
+
+    <!-- Results -->
+    <div id="product-results">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <p>Carregue a planilha e busque um produto</p>
+      </div>
+    </div>
+
+    <!-- Contagem list -->
+    <div id="cart-section" class="cart-section" style="display:none;">
+      <div class="cart-header">
+        <span>Contagem atual</span>
+        <span class="cart-count" id="cart-count">0</span>
+      </div>
+      <div class="cart-subtitle">Toque no ✕ para remover um item da contagem</div>
+      <div id="cart-items"></div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="btn-text" onclick="confirmClearAll()">🗑️ Limpar contagem e começar do zero</button>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="spacer"></div>
+  </div>
+
+  <div class="footer-bar">
+    <button class="btn btn-primary" onclick="openExportModal()">
+      <span>📊</span> Exportar Contagem (Excel)
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ MODAL EXPORTAR ══════════════════════════════════════ -->
+<div class="modal-overlay" id="export-modal" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📊 Exportar Contagem</div>
+
+    <div id="export-form-panel">
+      <div class="input-group">
+        <label>O que deseja exportar?</label>
+        <select id="export-scope-select" onchange="updateExportSummary()">
+          <option value="current">Somente o grupo atual</option>
+          <option value="all">Todos os grupos contados</option>
+        </select>
+      </div>
+
+      <div class="input-group">
+        <label>Nome do Responsável *</label>
+        <input type="text" id="responsavel-name" placeholder="Seu nome completo">
+      </div>
+
+      <div id="modal-summary" style="background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; font-size:12px; color:var(--text); margin-bottom:4px; max-height:200px; overflow-y:auto; line-height:1.7;">
+      </div>
+
+      <div class="modal-btns">
+        <button class="btn btn-outline" style="flex:1;" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:2;" id="confirm-export-btn" onclick="exportData()">
+          📤 Compartilhar Excel
+        </button>
+      </div>
+    </div>
+
+    <div id="export-fallback-panel" style="display:none;">
+      <div style="text-align:center; padding:6px 0 4px;">
+        <div style="font-size:36px;">✅</div>
+        <div style="font-family:'Syne', sans-serif; font-weight:700; font-size:16px; margin-top:6px;">Arquivo baixado!</div>
+        <div style="font-size:13px; color:var(--text2); margin-top:8px; line-height:1.5;" id="export-fallback-reason"></div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:18px;" onclick="openWhatsAppManual()">💬 Abrir WhatsApp</button>
+      <div style="font-size:11px; color:var(--text2); text-align:center; margin-top:10px; line-height:1.5;">
+        Escolha a conversa, toque no clipe 📎 → Documento e selecione <b id="export-fallback-filename"></b> (pasta Downloads).
+      </div>
+      <button class="btn-text" style="display:block; margin:12px auto 0;" onclick="closeModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ SCANNER ══════════════════════════════════════ -->
+<div class="scanner-overlay" id="scanner-overlay">
+  <video id="scanner-video" class="scanner-video" autoplay playsinline muted></video>
+  <div class="scanner-frame" id="scanner-frame">
+    <div class="scanner-line"></div>
+  </div>
+  <div class="scanner-text" id="scanner-text">Aponte para o código de barras</div>
+  <button class="scanner-close" onclick="closeScanner()">✕</button>
+  <button class="scanner-manual-btn" id="scanner-manual-btn" onclick="closeScanner()">Digitar manualmente</button>
+
+  <div class="scanner-message" id="scanner-message"></div>
+
+  <div class="scanner-result-card" id="scanner-result-card">
+    <div class="src-name" id="src-name"></div>
+    <div class="src-meta" id="src-meta"></div>
+    <div class="qty-row" style="margin-top:12px;">
+      <label>Quantidade</label>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="scanStepQty(-1)">−</button>
+        <input type="number" class="qty-val" id="scan-qty-val" min="0" inputmode="numeric">
+        <button class="qty-btn" onclick="scanStepQty(1)">+</button>
+      </div>
+    </div>
+    <div class="modal-btns" style="margin-top:14px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="skipScanResult()">Pular</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="confirmScanResult()">✓ Confirmar e continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ TOAST ══════════════════════════════════════ -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+const STORAGE_KEY = 'contagem_estoque_v1';
+const LOJA_KEY = 'contagem_estoque_loja';
+const GRUPO_KEY = 'contagem_estoque_grupo';
+const GRUPO_TODOS = '__all__';
+let allProducts = [];
+let selectedGrupo = '';
+let lastExportedFilename = '';
+let lastExportShareText = '';
+let count = {}; // key -> { name, cod, barcode, estoque, contado }
+let scannerStream = null;
+let barcodeDetector = null;
+let scanInterval = null;
+
+// ── LOJA ──
+function onLojaChange() {
+  localStorage.setItem(LOJA_KEY, document.getElementById('loja-select').value);
+}
+(function initLoja() {
+  const saved = localStorage.getItem(LOJA_KEY);
+  if (saved) document.getElementById('loja-select').value = saved;
+})();
+
+// ── GRUPO LINHA ──
+function onGrupoChange() {
+  selectedGrupo = document.getElementById('grupo-select').value;
+  localStorage.setItem(GRUPO_KEY, selectedGrupo);
+  filterProducts();
+}
+
+function populateGrupoOptions() {
+  const select = document.getElementById('grupo-select');
+  const grupos = [...new Set(allProducts.map(p => p.grupo).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  let html = `<option value="">— Selecione um grupo —</option>`;
+  html += `<option value="${GRUPO_TODOS}">Todos os grupos</option>`;
+  html += grupos.map(g => `<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+  select.innerHTML = html;
+  select.disabled = false;
+
+  const saved = localStorage.getItem(GRUPO_KEY);
+  if (saved && (saved === GRUPO_TODOS || grupos.includes(saved))) {
+    select.value = saved;
+    selectedGrupo = saved;
+  } else {
+    selectedGrupo = '';
+  }
+}
+
+// ── PERSISTENCE ──
+function saveProgress() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ count, savedAt: new Date().toISOString() }));
+  } catch (e) {}
+}
+function restoreProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && data.count && Object.keys(data.count).length) {
+      count = data.count;
+      renderCart();
+      showToast('Contagem anterior restaurada', 'success');
+    }
+  } catch (e) {}
+}
+function confirmClearAll() {
+  if (!Object.keys(count).length) { showToast('A contagem já está vazia', 'error'); return; }
+  if (confirm('Isso vai apagar todos os itens já contados. Deseja continuar?')) {
+    count = {};
+    saveProgress();
+    renderCart();
+    filterProducts();
+    showToast('Contagem zerada', 'success');
+  }
+}
+
+// ── AUTO-LOAD (busca automática produtos.csv na mesma pasta) ──
+async function autoLoadFile() {
+  const icon   = document.getElementById('db-icon');
+  const status = document.getElementById('db-status');
+  icon.textContent = '⏳';
+  status.textContent = 'Carregando produtos.csv...';
+
+  try {
+    const resp = await fetch('produtos.csv', { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const text = await resp.text();
+    parseCsvText(text, 'produtos.csv');
+  } catch (err) {
+    try {
+      const resp2 = await fetch('produtos.xlsx', { cache: 'no-cache' });
+      if (!resp2.ok) throw new Error(`HTTP ${resp2.status}`);
+      const buf = await resp2.arrayBuffer();
+      parseExcelBuffer(buf, 'produtos.xlsx');
+    } catch (err2) {
+      icon.textContent = '⚠️';
+      status.textContent = 'Nenhum arquivo de produtos encontrado na pasta.';
+      document.getElementById('fallback-upload').style.display = 'block';
+    }
+  }
+}
+
+function loadFileManual(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const isCsv = /\.csv$/i.test(file.name);
+  const reader = new FileReader();
+  if (isCsv) {
+    reader.onload = e => parseCsvText(e.target.result, file.name);
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    reader.onload = e => parseExcelBuffer(e.target.result, file.name, true);
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function parseCsvText(text, filename) {
+  try {
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+    applyProductRows(parsed.data, filename);
+  } catch (err) {
+    handleLoadError();
+  }
+}
+
+function parseExcelBuffer(buffer, filename, isBinary = false) {
+  try {
+    const wb = XLSX.read(buffer, { type: isBinary ? 'binary' : 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    applyProductRows(data, filename);
+  } catch (err) {
+    handleLoadError();
+  }
+}
+
+function handleLoadError() {
+  const icon   = document.getElementById('db-icon');
+  const status = document.getElementById('db-status');
+  icon.textContent = '❌';
+  status.textContent = 'Erro ao ler o arquivo. Verifique o formato.';
+  document.getElementById('fallback-upload').style.display = 'block';
+  showToast('Erro ao ler arquivo.', 'error');
+}
+
+function pick(row, keys) {
+  for (const k of keys) {
+    if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '') return String(row[k]).trim();
+  }
+  return '';
+}
+
+function parseEstoque(v) {
+  if (v === undefined || v === null || v === '') return 0;
+  const n = parseFloat(String(v).replace(',', '.').replace(/[^\d.-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function applyProductRows(rows, filename) {
+  allProducts = rows.map((row, i) => {
+    const name = pick(row, ['Nome', 'NOME', 'Produto', 'PRODUTO', 'Descrição', 'DESCRIÇÃO']);
+    const cod = pick(row, ['Cód', 'Codigo', 'Código', 'COD', 'CÓDIGO']);
+    const barcode = pick(row, ['Código de barras', 'Codigo de barras', 'EAN', 'Barcode']);
+    const barcode2 = pick(row, ['Código de barras 2']);
+    const barcode3 = pick(row, ['Código de barras 3']);
+    const barcode4 = pick(row, ['Código de barras 4']);
+    const estoque = parseEstoque(pick(row, ['Estoque', 'ESTOQUE']));
+    const status = pick(row, ['Status', 'STATUS']);
+    const grupo = pick(row, ['Grupo linha', 'GRUPO LINHA', 'Grupo Linha', 'Grupo', 'GRUPO']);
+    return { key: i, name, cod, barcode, barcode2, barcode3, barcode4, estoque, status, grupo };
+  }).filter(p => p.name || p.barcode || p.cod);
+
+  const icon   = document.getElementById('db-icon');
+  const status = document.getElementById('db-status');
+  const label  = document.getElementById('file-name-label');
+  icon.textContent = '✅';
+  status.textContent = `${filename}`;
+  label.textContent = `${allProducts.length} produtos carregados`;
+  label.style.display = 'block';
+  document.getElementById('upload-area').classList.add('has-file');
+  document.getElementById('fallback-upload').style.display = 'none';
+  showToast(`${allProducts.length} produtos carregados!`, 'success');
+  populateGrupoOptions();
+  restoreProgress();
+  filterProducts();
+}
+
+// ── FILTER PRODUCTS ──
+function filterProducts() {
+  const q = document.getElementById('product-search').value.trim().toLowerCase();
+  const container = document.getElementById('product-results');
+
+  if (!allProducts.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📊</div><p>Aguarde o carregamento da planilha</p></div>`;
+    return;
+  }
+  if (!selectedGrupo) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🏷️</div><p>Selecione um grupo linha acima para começar a contagem</p></div>`;
+    return;
+  }
+  if (!q) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Digite ou escaneie para buscar um produto</p></div>`;
+    return;
+  }
+
+  const byGrupo = selectedGrupo === GRUPO_TODOS
+    ? allProducts
+    : allProducts.filter(p => p.grupo === selectedGrupo);
+
+  const results = byGrupo.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    p.cod.toLowerCase().includes(q) ||
+    p.barcode.toLowerCase().includes(q) ||
+    p.barcode2.toLowerCase().includes(q) ||
+    p.barcode3.toLowerCase().includes(q) ||
+    p.barcode4.toLowerCase().includes(q)
+  ).slice(0, 30);
+
+  if (!results.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">😕</div><p>Nenhum produto encontrado</p></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="product-list">${results.map(p => renderProductItem(p)).join('')}</div>`;
+
+  // Se for exatamente 1 resultado (ex: leitura de código de barras), foca no campo de quantidade
+  if (results.length === 1) {
+    setTimeout(() => {
+      const el = document.getElementById(`qty-${results[0].key}`);
+      if (el) { el.focus(); el.select(); }
+    }, 50);
+  }
+}
+
+function renderProductItem(p) {
+  const contado = count[p.key] ? count[p.key].contado : 0;
+  const isSelected = !!count[p.key];
+  return `
+    <div class="product-item ${isSelected ? 'selected' : ''}" id="item-${p.key}">
+      <div class="product-item-top">
+        <div class="product-info">
+          <div class="product-name">${escapeHtml(p.name || '(sem nome)')}</div>
+          <div class="product-code">${p.cod ? 'Cód: ' + p.cod + ' · ' : ''}${p.barcode || 'sem código de barras'}${p.grupo ? ' · ' + escapeHtml(p.grupo) : ''}</div>
+        </div>
+        <div class="product-stock">Sistema: ${p.estoque}</div>
+      </div>
+      <div class="qty-row">
+        <label>Contado</label>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="stepQty(${p.key}, -1)">−</button>
+          <input type="number" class="qty-val" id="qty-${p.key}" value="${contado}" min="0" inputmode="numeric" onchange="setQty(${p.key}, this.value)">
+          <button class="qty-btn" onclick="stepQty(${p.key}, 1)">+</button>
+        </div>
+        ${isSelected ? renderDiffTag(contado, p.estoque) : ''}
+      </div>
+    </div>`;
+}
+
+function renderDiffTag(contado, estoque) {
+  const diff = contado - estoque;
+  if (diff === 0) return `<span class="diff-tag diff-ok">✓ OK</span>`;
+  if (diff < 0) return `<span class="diff-tag diff-falta">Falta ${Math.abs(diff)}</span>`;
+  return `<span class="diff-tag diff-sobra">Sobra ${diff}</span>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function stepQty(key, delta) {
+  const input = document.getElementById(`qty-${key}`);
+  const current = parseInt(input.value) || 0;
+  setQty(key, current + delta);
+}
+
+function setQty(key, val) {
+  const qty = Math.max(0, parseInt(val) || 0);
+  const p = allProducts.find(x => x.key === key);
+  if (!p) return;
+  if (qty === 0) {
+    delete count[key];
+  } else {
+    count[key] = { name: p.name, cod: p.cod, barcode: p.barcode, estoque: p.estoque, contado: qty, grupo: p.grupo };
+  }
+  const qtyInput = document.getElementById(`qty-${key}`);
+  if (qtyInput) qtyInput.value = qty;
+  saveProgress();
+  renderCart();
+  filterProducts();
+}
+
+function renderCart() {
+  const keys = Object.keys(count);
+  const section = document.getElementById('cart-section');
+  const countEl = document.getElementById('cart-count');
+  const itemsEl = document.getElementById('cart-items');
+  const statRow = document.getElementById('stat-row');
+
+  if (!keys.length) {
+    section.style.display = 'none';
+    statRow.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  statRow.style.display = 'flex';
+  countEl.textContent = keys.length;
+
+  let diffCount = 0;
+  itemsEl.innerHTML = keys.map(k => {
+    const item = count[k];
+    const diff = item.contado - item.estoque;
+    if (diff !== 0) diffCount++;
+    return `
+    <div class="cart-item">
+      <div class="cart-item-info">
+        <div class="cart-item-name">${escapeHtml(item.name || item.barcode || '—')}</div>
+        <div class="cart-item-meta">Sistema: ${item.estoque} · Contado: ${item.contado}${item.grupo ? ' · ' + escapeHtml(item.grupo) : ''}</div>
+      </div>
+      ${renderDiffTag(item.contado, item.estoque)}
+      <span class="cart-remove" onclick="setQty(${k}, 0)">✕</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('stat-total').textContent = keys.length;
+  document.getElementById('stat-diff').textContent = diffCount;
+}
+
+// ── EXPORT MODAL ──
+function getExportKeys(scope) {
+  const keys = Object.keys(count);
+  if (scope === 'current' && selectedGrupo && selectedGrupo !== GRUPO_TODOS) {
+    return keys.filter(k => count[k].grupo === selectedGrupo);
+  }
+  return keys;
+}
+
+function openExportModal() {
+  const allKeys = Object.keys(count);
+  if (!allKeys.length) { showToast('Conte ao menos um produto antes de exportar', 'error'); return; }
+
+  const hasSpecificGrupo = selectedGrupo && selectedGrupo !== GRUPO_TODOS;
+  const scopeSelect = document.getElementById('export-scope-select');
+  const currentOption = scopeSelect.querySelector('option[value="current"]');
+
+  if (hasSpecificGrupo) {
+    const currentCount = getExportKeys('current').length;
+    currentOption.textContent = `Somente o grupo atual (${selectedGrupo}) — ${currentCount} itens`;
+    currentOption.disabled = currentCount === 0;
+    scopeSelect.value = currentCount > 0 ? 'current' : 'all';
+  } else {
+    currentOption.textContent = 'Somente o grupo atual';
+    currentOption.disabled = true;
+    scopeSelect.value = 'all';
+  }
+
+  document.getElementById('responsavel-name').value = '';
+  document.getElementById('export-form-panel').style.display = 'block';
+  document.getElementById('export-fallback-panel').style.display = 'none';
+  updateExportSummary();
+  document.getElementById('export-modal').classList.add('active');
+}
+
+function updateExportSummary() {
+  const scope = document.getElementById('export-scope-select').value;
+  const keys = getExportKeys(scope);
+  const loja = document.getElementById('loja-select').value;
+
+  if (!keys.length) {
+    document.getElementById('modal-summary').innerHTML = `<i>Nenhum item contado neste grupo ainda.</i>`;
+    return;
+  }
+
+  let diffCount = 0;
+  keys.forEach(k => { if (count[k].contado - count[k].estoque !== 0) diffCount++; });
+
+  const scopeLabel = scope === 'current' ? `Grupo: ${selectedGrupo}` : 'Todos os grupos contados';
+  let summary = `<b>Loja:</b> ${loja}<br><b>Escopo:</b> ${escapeHtml(scopeLabel)}<br><b>Total de itens contados:</b> ${keys.length}<br><b>Itens com divergência:</b> ${diffCount}<br><br>`;
+  summary += keys.map(k => {
+    const item = count[k];
+    const diff = item.contado - item.estoque;
+    const tag = diff === 0 ? '✓' : (diff < 0 ? `⚠️ falta ${Math.abs(diff)}` : `⚠️ sobra ${diff}`);
+    return `▸ ${escapeHtml(item.name || item.barcode)} — sistema ${item.estoque} / contado <b>${item.contado}</b> ${tag}`;
+  }).join('<br>');
+
+  document.getElementById('modal-summary').innerHTML = summary;
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('export-modal')) {
+    document.getElementById('export-modal').classList.remove('active');
+  }
+}
+
+async function exportData() {
+  const responsavel = document.getElementById('responsavel-name').value.trim();
+  if (!responsavel) { showToast('Informe o nome do responsável', 'error'); return; }
+
+  const btn = document.getElementById('confirm-export-btn');
+  const resetBtn = () => { btn.innerHTML = '📤 Compartilhar Excel'; btn.disabled = false; };
+  btn.innerHTML = '⏳ Gerando...';
+  btn.disabled = true;
+
+  try {
+    const loja = document.getElementById('loja-select').value;
+    const scope = document.getElementById('export-scope-select').value;
+    const keys = getExportKeys(scope);
+    const now = new Date();
+    const scopeLabel = scope === 'current' ? selectedGrupo : 'Todos os grupos';
+
+    if (!keys.length) { showToast('Nenhum item para exportar neste escopo', 'error'); resetBtn(); return; }
+
+    const rows = [
+      ['Contagem de Estoque - O Bom Pet'],
+      ['Loja', loja],
+      ['Grupo', scopeLabel],
+      ['Responsável', responsavel],
+      ['Data/Hora', now.toLocaleString('pt-BR')],
+      [],
+      ['Código', 'Código de Barras', 'Produto', 'Grupo Linha', 'Estoque Sistema', 'Qtd Contada', 'Diferença', 'Situação']
+    ];
+
+    // Ordena por grupo e depois por nome, para facilitar a leitura quando exportar "todos os grupos"
+    const sortedKeys = keys.slice().sort((a, b) => {
+      const ia = count[a], ib = count[b];
+      const g = (ia.grupo || '').localeCompare(ib.grupo || '', 'pt-BR');
+      return g !== 0 ? g : (ia.name || '').localeCompare(ib.name || '', 'pt-BR');
+    });
+
+    sortedKeys.forEach(k => {
+      const item = count[k];
+      const diff = item.contado - item.estoque;
+      const situacao = diff === 0 ? 'OK' : (diff < 0 ? `Falta ${Math.abs(diff)}` : `Sobra ${diff}`);
+      rows.push([item.cod, item.barcode, item.name, item.grupo || '', item.estoque, item.contado, diff, situacao]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 12 }, { wch: 16 }, { wch: 45 }, { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Contagem');
+
+    const lojaSlug = loja.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+    const grupoSlug = scope === 'current'
+      ? selectedGrupo.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase()
+      : 'todos_grupos';
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = now.toTimeString().slice(0, 5).replace(':', '');
+    const filename = `contagem_${lojaSlug}_${grupoSlug}_${dateStr}_${timeStr}.xlsx`;
+
+    // Gera o arquivo em memória (array de bytes) para poder compartilhar OU baixar
+    const wbArray = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const file = new File([wbArray], filename, {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const shareText = `Contagem de estoque - ${loja} (${scopeLabel})`;
+
+    // Tenta abrir o compartilhamento nativo (WhatsApp aparece entre as opções no Android/iOS).
+    // Isso só funciona em contexto seguro (https) e em navegadores que suportam compartilhar arquivos.
+    const secure = window.isSecureContext;
+    const shareSupported = secure && !!navigator.canShare && navigator.canShare({ files: [file] });
+
+    if (shareSupported) {
+      try {
+        await navigator.share({ files: [file], title: 'Contagem de Estoque', text: shareText });
+        showToast('Arquivo compartilhado!', 'success');
+        closeModal();
+        resetBtn();
+        return;
+      } catch (shareErr) {
+        // Usuário cancelou o compartilhamento — não faz nada, só reabilita o botão
+        if (shareErr && shareErr.name === 'AbortError') {
+          resetBtn();
+          return;
+        }
+        // Outro erro real no compartilhamento: cai no fallback manual abaixo
+        console.error('Falha ao compartilhar:', shareErr);
+        XLSX.writeFile(wb, filename);
+        showExportFallback('Não foi possível abrir o compartilhamento automático. O arquivo já foi baixado.', filename, shareText);
+        return;
+      }
+    }
+
+    // Fallback: navegador/contexto não suporta compartilhamento de arquivos -> baixa e oferece atalho manual
+    XLSX.writeFile(wb, filename);
+    let reason;
+    if (!secure) {
+      reason = 'Este site está sem HTTPS, e o compartilhamento automático só funciona em conexões seguras. Ative o certificado SSL grátis no painel do Hostinger para habilitar isso.';
+    } else if (!navigator.canShare) {
+      reason = 'Este navegador não suporta compartilhamento automático de arquivos.';
+    } else {
+      reason = 'Este tipo de arquivo não pôde ser compartilhado automaticamente neste navegador.';
+    }
+    showExportFallback(reason, filename, shareText);
+  } catch (err) {
+    console.error(err);
+    showToast('Erro ao gerar o arquivo', 'error');
+  } finally {
+    resetBtn();
+  }
+}
+
+function showExportFallback(reason, filename, shareText) {
+  document.getElementById('export-form-panel').style.display = 'none';
+  document.getElementById('export-fallback-panel').style.display = 'block';
+  document.getElementById('export-fallback-reason').textContent = reason;
+  document.getElementById('export-fallback-filename').textContent = filename;
+  lastExportedFilename = filename;
+  lastExportShareText = shareText;
+}
+
+function openWhatsAppManual() {
+  const text = `${lastExportShareText} — arquivo: ${lastExportedFilename}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
+// ── SCANNER (modo coletor: escaneia, ajusta quantidade, volta a escanear) ──
+let scanPaused = false;
+let currentScanProduct = null;
+let lastConfirmedCode = null;
+let lastConfirmedTime = 0;
+
+function openScanner() {
+  const overlay = document.getElementById('scanner-overlay');
+  overlay.classList.add('active');
+  resetScannerUI();
+  scanPaused = false;
+  currentScanProduct = null;
+
+  if ('BarcodeDetector' in window) {
+    barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128', 'qr_code', 'code_39'] });
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } })
+    .then(stream => {
+      scannerStream = stream;
+      const video = document.getElementById('scanner-video');
+      video.srcObject = stream;
+      video.play();
+      if (barcodeDetector) {
+        scanInterval = setInterval(async () => {
+          if (scanPaused || video.readyState < 2) return;
+          try {
+            const barcodes = await barcodeDetector.detect(video);
+            if (barcodes.length > 0) handleScanResult(barcodes[0].rawValue);
+          } catch (e) {}
+        }, 300);
+      }
+    })
+    .catch(() => { closeScanner(); showToast('Câmera não disponível. Use a busca manual.', 'error'); });
+}
+
+function closeScanner() {
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+  if (scannerStream) { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  document.getElementById('scanner-overlay').classList.remove('active');
+  scanPaused = false;
+  currentScanProduct = null;
+  resetScannerUI();
+}
+
+function resetScannerUI() {
+  document.getElementById('scanner-result-card').classList.remove('show');
+  document.getElementById('scanner-message').classList.remove('show');
+  document.getElementById('scanner-frame').style.display = '';
+  document.getElementById('scanner-text').style.display = '';
+}
+
+function findProductByCode(code) {
+  return allProducts.find(p =>
+    p.barcode === code || p.barcode2 === code || p.barcode3 === code || p.barcode4 === code
+  );
+}
+
+function handleScanResult(code) {
+  // evita processar o mesmo código repetidamente enquanto ainda está na mira da câmera
+  if (code === lastConfirmedCode && (Date.now() - lastConfirmedTime) < 1500) return;
+
+  scanPaused = true;
+
+  if (!allProducts.length) {
+    showScannerMessage('Carregue a planilha de produtos primeiro.');
+    setTimeout(() => { scanPaused = false; hideScannerMessage(); }, 1600);
+    return;
+  }
+
+  const product = findProductByCode(code);
+  if (!product) {
+    showScannerMessage(`Código não encontrado: ${code}`);
+    setTimeout(() => { scanPaused = false; hideScannerMessage(); }, 1600);
+    return;
+  }
+
+  if (navigator.vibrate) navigator.vibrate(60);
+  showScanResultCard(product);
+}
+
+function showScannerMessage(msg) {
+  const el = document.getElementById('scanner-message');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideScannerMessage() {
+  document.getElementById('scanner-message').classList.remove('show');
+}
+
+function showScanResultCard(product) {
+  currentScanProduct = product;
+  document.getElementById('scanner-frame').style.display = 'none';
+  document.getElementById('scanner-text').style.display = 'none';
+
+  const existing = count[product.key] ? count[product.key].contado : 0;
+  const nextQty = existing + 1;
+
+  document.getElementById('src-name').textContent = product.name || product.barcode;
+  document.getElementById('src-meta').textContent =
+    `${product.grupo ? product.grupo + ' · ' : ''}Estoque sistema: ${product.estoque}${existing ? ' · já contado: ' + existing : ''}`;
+
+  const qtyInput = document.getElementById('scan-qty-val');
+  qtyInput.value = nextQty;
+
+  const card = document.getElementById('scanner-result-card');
+  card.classList.add('show');
+  setTimeout(() => { qtyInput.focus(); qtyInput.select(); }, 100);
+}
+
+function scanStepQty(delta) {
+  const input = document.getElementById('scan-qty-val');
+  const val = Math.max(0, (parseInt(input.value) || 0) + delta);
+  input.value = val;
+}
+
+function confirmScanResult() {
+  if (!currentScanProduct) return;
+  const qty = Math.max(0, parseInt(document.getElementById('scan-qty-val').value) || 0);
+  setQty(currentScanProduct.key, qty);
+
+  lastConfirmedCode = currentScanProduct.barcode;
+  lastConfirmedTime = Date.now();
+
+  showToast(`✓ ${currentScanProduct.name || currentScanProduct.barcode} — ${qty} un.`, 'success');
+  resumeScanningAfterCard();
+}
+
+function skipScanResult() {
+  resumeScanningAfterCard();
+}
+
+function resumeScanningAfterCard() {
+  document.getElementById('scanner-result-card').classList.remove('show');
+  currentScanProduct = null;
+  setTimeout(() => {
+    resetScannerUI();
+    scanPaused = false;
+  }, 400);
+}
+
+// permite confirmar apertando Enter no campo de quantidade do scanner
+document.addEventListener('DOMContentLoaded', () => {
+  const scanQtyInput = document.getElementById('scan-qty-val');
+  if (scanQtyInput) {
+    scanQtyInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); confirmScanResult(); }
+    });
+  }
+});
+
+// ── TOAST ──
+function showToast(msg, type = '') {
+  const toast = document.getElementById('toast');
+  const icons = { success: '✅', error: '❌' };
+  toast.innerHTML = `${icons[type] || 'ℹ️'} ${msg}`;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── BOTÃO VOLTAR NATIVO: não sai do app sem querer ──
+// Fecha câmera/modal se estiverem abertos; caso contrário, exige um segundo toque
+// em até 2s para realmente sair (padrão "toque voltar novamente para sair").
+let lastBackPressTime = 0;
+history.pushState({ app: true }, '', location.href);
+
+window.addEventListener('popstate', function () {
+  const scannerOpen = document.getElementById('scanner-overlay').classList.contains('active');
+  const modalOpen = document.getElementById('export-modal').classList.contains('active');
+
+  if (scannerOpen) {
+    closeScanner();
+    history.pushState({ app: true }, '', location.href);
+    return;
+  }
+  if (modalOpen) {
+    document.getElementById('export-modal').classList.remove('active');
+    history.pushState({ app: true }, '', location.href);
+    return;
+  }
+
+  const now = Date.now();
+  if (now - lastBackPressTime < 2000) {
+    // segundo toque em voltar: deixa sair normalmente (não re-empilha o estado)
+    return;
+  }
+  lastBackPressTime = now;
+  showToast('Toque em voltar novamente para sair', '');
+  history.pushState({ app: true }, '', location.href);
+});
+
+// ── INIT ──
+autoLoadFile();
+</script>
+</body>
+</html>
